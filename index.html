@@ -408,17 +408,7 @@ function init() {
     buildWeapon();
 
     controls = new PointerLockControls(camera, document.body);
-
-    // Patch sensitivity into PointerLockControls
-    const origOnMouseMove = controls.onMouseMove.bind(controls);
-    controls.onMouseMove = (e) => {
-        // temporarily scale the movement
-        const orig = { movementX: e.movementX, movementY: e.movementY };
-        const fakeEvent = Object.create(e);
-        Object.defineProperty(fakeEvent, 'movementX', { value: e.movementX * sensitivity });
-        Object.defineProperty(fakeEvent, 'movementY', { value: e.movementY * sensitivity });
-        origOnMouseMove(fakeEvent);
-    };
+    controls.pointerSpeed = sensitivity;
 
     setupEventHandlers();
     buildShopUI();
@@ -1279,6 +1269,7 @@ function setupEventHandlers() {
     document.getElementById('sens-slider').addEventListener('input', (e) => {
         sensitivity = parseFloat(e.target.value);
         document.getElementById('sens-val').innerText = sensitivity.toFixed(1);
+        if (controls) controls.pointerSpeed = sensitivity;
     });
 
     document.getElementById('start-btn').addEventListener('click', () => controls.lock());
