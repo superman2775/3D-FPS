@@ -362,8 +362,8 @@ let gunMeshes = [];
 // Config
 const MAP_SIZE = 120;
 const P_SPEED = 40.0;
-const BOT_BASE_SPEED = 7.0;
-const MAX_ENEMIES = 8;
+const BOT_BASE_SPEED = 5.0;
+const MAX_ENEMIES = 6;
 
 init();
 animate();
@@ -754,10 +754,10 @@ function updateParticles(delta) {
 */
 class Enemy {
     constructor() {
-        this.hp = 100;
-        this.maxHp = 100;
-        this.speed = BOT_BASE_SPEED + Math.random()*3;
-        this.damage = 12;
+        this.hp = 75;
+        this.maxHp = 75;
+        this.speed = BOT_BASE_SPEED + Math.random()*2;
+        this.damage = 8;
         this.team = 'red'; // future: blue bots
 
         // AI
@@ -767,12 +767,12 @@ class Enemy {
         this.targetEntity = null; // another enemy or 'player'
         this.patrolTarget = this.randomNavPoint();
         this.lastShotTime = 0;
-        this.shootCooldown = 1200 + Math.random()*800;
+        this.shootCooldown = 1400 + Math.random()*900;
         this.burstCount = 0;
-        this.burstMax = Math.floor(Math.random()*3)+2;
+        this.burstMax = Math.floor(Math.random()*2)+1;
         this.coverPoint = null;
         this.timeSinceLastDamage = 999;
-        this.aggroRange = 30 + Math.random()*10;
+        this.aggroRange = 22 + Math.random()*8;
         this.stuck = 0;
         this.lastPos = new THREE.Vector3();
 
