@@ -163,6 +163,7 @@
         <span class="settings-val" id="sens-val">1.2</span>
     </div>
     <button class="btn" id="start-btn">▶ DEPLOY</button>
+    <button class="btn" id="open-shop-btn" style="color:#ffcc00;border-color:#ffcc00;margin-top:12px;">⬡ ARMORY</button>
 </div>
 
 <div id="game-over-menu" class="overlay">
@@ -325,6 +326,8 @@ let moveForward=false, moveBackward=false, moveLeft=false, moveRight=false;
 let prevTime = performance.now();
 let gameActive = false;
 let shopOpen = false;
+let shopOpenedFromMenu = false;
+let shopState = { coins: 0, purchasedWeapons: ['pistol'], purchasedGear: [] };
 
 // Player
 const MAX_HP = 100;
@@ -411,6 +414,7 @@ function init() {
     controls = new PointerLockControls(camera, document.body);
     controls.pointerSpeed = sensitivity;
 
+    loadShopState();
     setupEventHandlers();
     buildShopUI();
 
@@ -862,7 +866,7 @@ class Enemy {
         if(idx > -1) enemies.splice(idx,1);
         score++;
         coins += 10;
-        updateHUD();
+        saveShopState();
         showKillPopup();
         setTimeout(() => { if(gameActive) spawnEnemy(); }, 2000 + Math.random()*2000);
     }
@@ -1190,6 +1194,9 @@ function buildShopUI() {
 function buyWeapon(wDef, slotIndex) {
     if(coins < wDef.cost) return;
     coins -= wDef.cost;
+    wDef.owned = true;
+    shopState.purchasedWeapons = Array.from(new Set([...shopState.purchasedWeapons, wDef.id]));
+    saveShopState();
     weaponSlots[slotIndex] = wDef;
     updateHUD();
     buildShopUI();
@@ -1199,6 +1206,11 @@ function buyWeapon(wDef, slotIndex) {
 function buyGear(gear) {
     if(coins < gear.cost) return;
     coins -= gear.cost;
+    if(['speed','damage','reload'].includes(gear.type)) {
+        shopState.purchasedGear.push(gear.id);
+        applyPurchasedGearUpgrades();
+    }
+    saveShopState();
 
     switch(gear.type) {
         case 'armor': playerArmor = Math.min(200, playerArmor + gear.value); break;
@@ -1217,10 +1229,12 @@ function buyGear(gear) {
 }
 
 function openShop() {
+    shopOpenedFromMenu = document.getElementById('start-menu').style.display === 'flex';
     shopOpen = true;
     gameActive = false;
     controls.unlock();
     buildShopUI();
+    document.getElementById('start-menu').style.display = 'none';
     document.getElementById('shop-overlay').style.display = 'flex';
     document.getElementById('hud').style.display = 'none';
 }
@@ -1228,7 +1242,67 @@ function openShop() {
 function closeShop() {
     shopOpen = false;
     document.getElementById('shop-overlay').style.display = 'none';
-    controls.lock();
+    if(shopOpenedFromMenu) {
+        shopOpenedFromMenu = false;
+        document.getElementById('start-menu').style.display = 'flex';
+    } else {
+        controls.lock();
+    }
+}
+
+function saveShopState() {
+    shopState.coins = coins;
+    shopState.purchasedWeapons = WEAPONS.filter(w => w.owned).map(w => w.id);
+    localStorage.setItem('fpsShopState', JSON.stringify(shopState));
+}
+
+function loadShopState() {
+    const saved = localStorage.getItem('fpsShopState');
+    if(saved !== null) {
+        try {
+            const parsed = JSON.parse(saved);
+            if(parsed && typeof parsed === 'object') {
+                shopState = {
+                    coins: Number(parsed.coins) || 0,
+                    purchasedWeapons: Array.isArray(parsed.purchasedWeapons) ? parsed.purchasedWeapons : ['pistol'],
+                    purchasedGear: Array.isArray(parsed.purchasedGear) ? parsed.purchasedGear : []
+                };
+            }
+        } catch (err) {
+            shopState = { coins: 0, purchasedWeapons: ['pistol'], purchasedGear: [] };
+        }
+    }
+    coins = Number(shopState.coins) || 0;
+    restoreShopState();
+    applyPurchasedGearUpgrades();
+}
+
+function restoreShopState() {
+    WEAPONS.forEach(w => {
+        w.owned = shopState.purchasedWeapons.includes(w.id);
+    });
+    weaponSlots = [WEAPONS[0], null, null, null];
+    WEAPONS.forEach(w => {
+        if(w.id !== 'pistol' && w.owned) {
+            weaponSlots[w.slot] = w;
+        }
+    });
+    currentWeaponSlot = 0;
+}
+
+function applyPurchasedGearUpgrades() {
+    speedMult = 1;
+    damageMult = 1;
+    reloadMult = 1;
+    shopState.purchasedGear.forEach(id => {
+        const gear = GEAR.find(g => g.id === id);
+        if(!gear) return;
+        switch(gear.type) {
+            case 'speed': speedMult *= gear.value; break;
+            case 'damage': damageMult *= gear.value; break;
+            case 'reload': reloadMult *= gear.value; break;
+        }
+    });
 }
 
 // ═══════════════════════════════════════════════
@@ -1274,6 +1348,7 @@ function setupEventHandlers() {
     });
 
     document.getElementById('start-btn').addEventListener('click', () => controls.lock());
+    document.getElementById('open-shop-btn').addEventListener('click', openShop);
     document.getElementById('restart-btn').addEventListener('click', () => { resetGame(); controls.lock(); });
     document.getElementById('shop-close').addEventListener('click', closeShop);
 
@@ -1305,7 +1380,7 @@ function setupEventHandlers() {
             case 'KeyR': if(gameActive) reload(); break;
             case 'Tab':
                 e.preventDefault();
-                if(gameActive || shopOpen) {
+                if(shopOpen || gameActive || document.getElementById('start-menu').style.display === 'flex') {
                     if(shopOpen) closeShop();
                     else openShop();
                 }
@@ -1382,14 +1457,13 @@ function resetGame() {
     particles.forEach(p => scene.remove(p.mesh));
     particles = [];
 
-    playerHP = MAX_HP; playerArmor = 0; score = 0; coins = 0;
+    playerHP = MAX_HP; playerArmor = 0; score = 0;
     speedMult = 1; damageMult = 1; reloadMult = 1;
+    applyPurchasedGearUpgrades();
 
-    // Reset weapons
-    WEAPONS.forEach(w => { if(w.id !== 'pistol') w.owned = false; });
-    weaponSlots = [WEAPONS[0], null, null, null];
-    currentWeaponSlot = 0;
-    ammo = WEAPONS[0].maxAmmo;
+    // Preserve purchased weapons and shop upgrades
+    restoreShopState();
+    ammo = weaponSlots[currentWeaponSlot].maxAmmo;
     isReloading = false; canShoot = true;
     gunMeshes.forEach((g,i) => g.group.visible = i === 0);
     gunGroup = gunMeshes[0].group;
