@@ -373,8 +373,8 @@ animate();
 // ═══════════════════════════════════════════════
 function init() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x162a42);
-    scene.fog = new THREE.FogExp2(0x162a42, 0.014);
+    scene.background = new THREE.Color(0x235a7f);
+    scene.fog = new THREE.FogExp2(0x235a7f, 0.010);
 
     camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
     camera.position.y = 2;
@@ -387,10 +387,10 @@ function init() {
     document.body.appendChild(renderer.domElement);
 
     // Lighting
-    scene.add(new THREE.AmbientLight(0x4d6c8a, 2.5));
-    scene.add(new THREE.HemisphereLight(0xabbcff, 0x334455, 0.6));
+    scene.add(new THREE.AmbientLight(0x7aa9d1, 3.0));
+    scene.add(new THREE.HemisphereLight(0xddeeff, 0x556688, 1.0));
 
-    const moon = new THREE.DirectionalLight(0x7faaff, 2.0);
+    const moon = new THREE.DirectionalLight(0x99cfff, 3.0);
     moon.position.set(-30, 60, 20);
     moon.castShadow = true;
     moon.shadow.camera.top = moon.shadow.camera.right = 60;
@@ -399,8 +399,8 @@ function init() {
     scene.add(moon);
 
     // Accent lights scattered
-    [[20,0,20],[- 20,0,-20],[30,0,-10]].forEach(([x,y,z]) => {
-        const pt = new THREE.PointLight(0x00ff66, 0.6, 40);
+    [[20,0,20],[-20,0,-20],[30,0,-10],[0,0,30],[0,0,-30]].forEach(([x,y,z]) => {
+        const pt = new THREE.PointLight(0x66ffcc, 1.0, 45);
         pt.position.set(x, 4, z);
         scene.add(pt);
     });
@@ -424,7 +424,7 @@ function init() {
 function buildWorld() {
     // Floor with grid texture
     const floorGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 30, 30);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x0d1a0d, roughness: 0.95, wireframe: false });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x1d3155, roughness: 0.85, wireframe: false });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI/2; floor.receiveShadow = true;
     scene.add(floor);
